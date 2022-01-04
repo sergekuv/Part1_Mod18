@@ -46,13 +46,13 @@ namespace Task_18_4
             }
             public async Task Execute()
             {
-                var x = await command.Execute();
+                await command.Execute();
             }
         }
 
         public interface ICommand
         {
-            public Task<int> Execute();
+            public Task Execute();
         }
 
         public class GetInfoCommand : ICommand
@@ -64,27 +64,25 @@ namespace Task_18_4
                 this.receiver.VideoName = videoName;
             }
 
-            public async Task<int> Execute()
+            public async Task Execute()
             {
                 receiver.GetVideoInfo();
-                return 0;
             }
         }
 
         public class DownloadCommand : ICommand
         {
             Rcvr receiver;
-            string videoName;
             public DownloadCommand(Rcvr receiver, string videoName)
             {
                 this.receiver = receiver;
                 this.receiver.VideoName = videoName;
             }
 
-            public async Task<int> Execute()
+            public async Task Execute()
             {
-                var x = await receiver.Download();
-                return 0;
+                await receiver.Download();
+                //return 0;
             }
         }
 
@@ -104,7 +102,7 @@ namespace Task_18_4
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"No video \"{this.VideoName}\" found");
+                    Console.WriteLine($"No video \"{this.VideoName}\" found. Exception Message: {ex.Message}");
                     return false;
                 }
             }
@@ -115,24 +113,24 @@ namespace Task_18_4
                 var info = youtube.Videos.GetAsync(videoId);
                 Console.WriteLine(info.Result.Author);
             }
-            public async Task<int> Download()
+            public async Task Download()
             {
                 //var youtube = new YoutubeClient();
-                if (!ValidateVideo()) return 1;
+                if (!ValidateVideo()) return; //1;
 
                 var streamManifest = await youtube.Videos.Streams.GetManifestAsync(videoId);
                 var streamInfo = streamManifest.GetMuxedStreams().TryGetWithHighestVideoQuality();
                 if (streamInfo is null)
                 {
                     Console.Error.WriteLine("This video has no muxed streams.");
-                    return 1;
+                    return; // 1;
                 }
 
                 Console.Write($"Downloading stream: {streamInfo.Container.Name}");
                 var fileName = $"{videoId}.{streamInfo.Container.Name}";
                 await youtube.Videos.Streams.DownloadAsync(streamInfo, fileName);
                 Console.WriteLine($"Video saved to '{fileName}'");
-                return 0;
+                return; // 0;
             }
         }
     }
