@@ -5,7 +5,10 @@ using YoutubeExplode;
 using YoutubeExplode.Videos;
 using YoutubeExplode.Videos.Streams;
 
-namespace Task_18_4
+/// <summary>
+/// 
+/// </summary>
+namespace Task_18_4     
 {
     class Program
     {
@@ -43,7 +46,7 @@ namespace Task_18_4
             }
             public async Task Execute()
             {
-                var  x = await command.Execute();
+                var x = await command.Execute();
             }
         }
 
@@ -80,8 +83,8 @@ namespace Task_18_4
 
             public async Task<int> Execute()
             {
-               var x = await receiver.Download(); 
-               return 0;
+                var x = await receiver.Download();
+                return 0;
             }
         }
 
