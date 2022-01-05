@@ -1,91 +1,85 @@
 ﻿using System;
 using System.Threading.Tasks;
 using YoutubeExplode;
-//using YoutubeExplode.DemoConsole.Utils;
 using YoutubeExplode.Videos;
 using YoutubeExplode.Videos.Streams;
+using System.Collections.Generic;
 
-namespace Task_18_4
+namespace Task_18_4     
 {
     class Program
     {
         static async Task Main()
         {
-            string action = "3";
-            string videoName = "https://www.youtube.com/watch?v=A7MNA-qMOMM";
-
-            //while (true)
-            //{
-            //    Console.Write("Укажите действие:\n 1 - получить информацию\n2 - загрузить\n3 - завершщить работу\nВаш выбор: ");
-
-            //}
-
-            //Receiver receiver = new();
-            Rcvr receiver = new();
-            GetInfoCommand infoCommand = new(receiver, videoName);
-
+            const string defaultVideoName = "https://www.youtube.com/watch?v=A7MNA-qMOMM";
+            string videoName = defaultVideoName;
+            Receiver receiver = new();
             Sender sender = new();
-            sender.SetCommand(infoCommand);
-            await sender.Execute();
 
-            Console.WriteLine("\nDownloading part\n");
-            DownloadCommand downloadComand = new(receiver, videoName);
-            sender.SetCommand(downloadComand);
-            await sender.Execute();
+            while (true)
+            {
+                Console.Write("\nВведите ссылку на видео на youtibe.\nЕсли нажмете Enter, получите ссылку по умолчанию (A7MNA-qMOMM): ");
+                videoName = Console.ReadLine();
+                if (string.IsNullOrEmpty(videoName)) 
+                    videoName = defaultVideoName; 
+
+                Console.Write("Укажите действие:\n1 - получить информацию о видео\n2 - загрузить видео\nВаш выбор: ");
+                switch (Console.ReadLine())
+                {
+                    case "1":
+                        GetInfoCommand infoCommand = new(receiver, videoName);
+                        sender.SetCommand(infoCommand);
+                        await sender.Execute();
+                        break;
+
+                    case "2":
+                        DownloadCommand downloadComand = new(receiver, videoName);
+                        sender.SetCommand(downloadComand);
+                        await sender.Execute();
+                        break;
+
+                    default: return;
+                }
+            }
         }
 
         internal class Sender
         {
             ICommand command;
-            public void SetCommand(ICommand command)
-            {
-                this.command = command;
-            }
-            public async Task Execute()
-            {
-                var  x = await command.Execute();
-            }
+            public void SetCommand(ICommand command) => this.command = command;
+            public async Task Execute() => await command.Execute();
         }
 
         public interface ICommand
         {
-            public Task<int> Execute();
+            public Task Execute();
         }
 
         public class GetInfoCommand : ICommand
         {
-            Rcvr receiver;
-            public GetInfoCommand(Rcvr receiver, string videoName)
+            Receiver receiver;
+            public GetInfoCommand(Receiver receiver, string videoName)
             {
                 this.receiver = receiver;
                 this.receiver.VideoName = videoName;
             }
 
-            public async Task<int> Execute()
-            {
-                receiver.GetVideoInfo();
-                return 0;
-            }
+            public async Task Execute() => receiver.GetVideoInfo();
         }
 
         public class DownloadCommand : ICommand
         {
-            Rcvr receiver;
-            string videoName;
-            public DownloadCommand(Rcvr receiver, string videoName)
+            Receiver receiver;
+            public DownloadCommand(Receiver receiver, string videoName)
             {
                 this.receiver = receiver;
                 this.receiver.VideoName = videoName;
             }
 
-            public async Task<int> Execute()
-            {
-               var x = await receiver.Download(); 
-               return 0;
-            }
+            public async Task Execute() => await receiver.Download();
         }
 
-        internal class Rcvr
+        internal class Receiver
         {
             YoutubeClient youtube = new();
             public string VideoName { get; set; }
@@ -101,7 +95,7 @@ namespace Task_18_4
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"No video \"{this.VideoName}\" found");
+                    Console.WriteLine($"No video \"{this.VideoName}\" found. Exception Message: {ex.Message}");
                     return false;
                 }
             }
@@ -110,26 +104,31 @@ namespace Task_18_4
                 if (!ValidateVideo()) return;
 
                 var info = youtube.Videos.GetAsync(videoId);
-                Console.WriteLine(info.Result.Author);
+                Console.WriteLine(info.Result.Description);
             }
-            public async Task<int> Download()
+            public async Task Download()
             {
-                //var youtube = new YoutubeClient();
-                if (!ValidateVideo()) return 1;
+                if (!ValidateVideo()) return;
 
-                var streamManifest = await youtube.Videos.Streams.GetManifestAsync(videoId);
-                var streamInfo = streamManifest.GetMuxedStreams().TryGetWithHighestVideoQuality();
-                if (streamInfo is null)
+                try
                 {
-                    Console.Error.WriteLine("This video has no muxed streams.");
-                    return 1;
-                }
+                    var streamManifest = await youtube.Videos.Streams.GetManifestAsync(videoId);
+                    var streamInfo = streamManifest.GetMuxedStreams().TryGetWithHighestVideoQuality();
+                    if (streamInfo is null)
+                    {
+                        Console.Error.WriteLine("This video has no muxed streams.");
+                        return;
+                    }
 
-                Console.Write($"Downloading stream: {streamInfo.Container.Name}");
-                var fileName = $"{videoId}.{streamInfo.Container.Name}";
-                await youtube.Videos.Streams.DownloadAsync(streamInfo, fileName);
-                Console.WriteLine($"Video saved to '{fileName}'");
-                return 0;
+                    Console.Write($"Downloading stream: {streamInfo.Container.Name}");
+                    var fileName = $"{videoId}.{streamInfo.Container.Name}";
+                    await youtube.Videos.Streams.DownloadAsync(streamInfo, fileName);
+                    Console.WriteLine($"Video saved to '{fileName}'");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception occured while downloading: {ex.Message}");
+                }
             }
         }
     }
